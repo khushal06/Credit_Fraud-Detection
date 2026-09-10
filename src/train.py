@@ -225,18 +225,24 @@ def train_and_evaluate():
     print(json.dumps(rf_metrics, indent=2))
     print_confusion_matrix(y_test, rf_pred)
 
+    # scale_pos_weight=1 (no reweighting): PR-AUC is a ranking metric, and reweighting
+    # toward the minority class degrades LightGBM's ranking here rather than helping it
+    # (see the README's LightGBM section for the sweep evidence). Imbalance is instead
+    # handled downstream, at the decision threshold (the app's threshold slider).
     lgbm = LGBMClassifier(
-        is_unbalance=True,
-        n_estimators=500,
+        scale_pos_weight=1,
+        n_estimators=400,
         learning_rate=0.05,
-        max_depth=6,
+        max_depth=5,
+        subsample=0.9,
+        colsample_bytree=0.9,
         random_state=RANDOM_STATE,
         n_jobs=-1,
         verbosity=-1,
     )
     lgbm.fit(X_train, y_train)
     lgbm_pred = lgbm.predict(X_test)
-    lgbm_prob = lgbm.predict_proba(X_test)[:, 1]
+    lgbm_prob = lgbm.predict_proba(X_test)[:, 1]  # probability of class 1 (fraud) — used for ROC-AUC/PR-AUC
     lgbm_metrics = calculate_metrics(y_test, lgbm_pred, lgbm_prob)
 
     print("\nLightGBM metrics:")

@@ -2,6 +2,7 @@ import joblib
 import matplotlib
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
+import numpy as np
 import shap
 
 try:
@@ -24,6 +25,12 @@ def main():
 
     explainer = shap.Explainer(model, sample)
     shap_values = explainer(sample)
+
+    mean_abs_shap = np.abs(shap_values.values).mean(axis=0)
+    ranking = sorted(zip(sample.columns, mean_abs_shap), key=lambda kv: kv[1], reverse=True)
+    print("Top features by mean |SHAP value| (most to least important):")
+    for rank, (feature, value) in enumerate(ranking[:5], start=1):
+        print(f"{rank}. {feature}: {value:.4f}")
 
     output_path = FIGURES_DIR / "shap_summary.png"
     shap.summary_plot(shap_values, sample, show=False)
